@@ -19,9 +19,17 @@ pip install -r requirements.txt
 python ./src/auto_clicker.pyw
 ```
 
-You can now toggle the auto clicker by pressing `Z`.
+You can now toggle the auto clicker by pressing `F4`.
 
 To close the program, open the system tray and exit the process.
+
+## Configuration
+
+The configuration file is [`config.toml`](src/config.toml).
+
+**Options:**
+- `click_interval`
+- `toggle_hotkey`
 
 ## Dependencies
 

@@ -1,19 +1,44 @@
 import threading
 import time
 import os
+import sys
+import signal
 from pynput.mouse import Button, Controller
-from pynput.keyboard import Listener, KeyCode
+from pynput.keyboard import Listener, KeyCode, Key
 import pystray
 from PIL import Image
+import tomllib
+
+def load_config() -> dict:
+    default_config: dict = {"click_interval": 0.05, "toggle_hotkey": "f4"}
+    try:
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        config_path = os.path.join(script_dir, "config.toml")
+
+        with open(config_path, "rb") as f:
+            file_config = tomllib.load(f)
+            default_config.update(file_config)
+
+    except FileNotFoundError:
+        print("Config file not found, using defaults.")
+    except Exception as e:
+        print(f"Error reading config: {e}, using defaults.")
+
+    return default_config
 
 class AutoClicker:
     """
     Handles the clicking logic in a separate thread to ensure
     non-blocking execution and precise timing.
     """
-    def __init__(self, delay: float = 0.05, toggle_key: str = "z") -> None:
+    def __init__(self, delay: float = 0.05, toggle_key: str = "f4") -> None:
         self.delay: float = delay
-        self.toggle_key: KeyCode = KeyCode(char=toggle_key)
+
+        try:
+            self.toggle_key = getattr(Key, toggle_key.lower())
+        except AttributeError:
+            self.toggle_key = KeyCode(char=toggle_key)
+
         self.running: bool = False
         self.program_active: bool = True
         self.mouse: Controller = Controller()
@@ -74,10 +99,13 @@ class SystemTrayApp:
             color: tuple[int, int, int] = (65, 105, 225)
             return Image.new("RGB", (width, height), color)
 
-    def _on_exit(self, icon: pystray.Icon, _item: pystray.MenuItem) -> None:
+    def stop(self) -> None:
         self.clicker.stop_program()
         self.input_handler.stop()
-        icon.stop()
+        self.icon.stop()
+
+    def _on_exit(self) -> None:
+        self.stop()
 
     def run(self) -> None:
         self.clicker.start()
@@ -85,8 +113,19 @@ class SystemTrayApp:
         self.icon.run()
 
 if __name__ == "__main__":
-    clicker_service: AutoClicker = AutoClicker(delay=0.01, toggle_key="z")
+    config: dict = load_config()
+
+    clicker_service: AutoClicker = AutoClicker(
+        delay=config.get("click_interval", 0.05),
+        toggle_key=config.get("toggle_hotkey", "f4")
+    )
     input_service: InputHandler = InputHandler(clicker_service)
     app: SystemTrayApp = SystemTrayApp(clicker_service, input_service)
 
+    def signal_handler(_sig, _frame) -> None:
+        print("\nExiting")
+        app.stop()
+        sys.exit(0)
+
+    signal.signal(signal.SIGINT, signal_handler)
     app.run()
