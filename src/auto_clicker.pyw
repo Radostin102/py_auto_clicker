@@ -1,6 +1,5 @@
 import threading
 import time
-import os
 import sys
 import signal
 from pynput.mouse import Button, Controller
@@ -8,12 +7,14 @@ from pynput.keyboard import Listener, KeyCode, Key
 import pystray
 from PIL import Image
 import tomllib
+from pathlib import Path
+
+SCRIPT_DIR = Path(__file__).parent
 
 def load_config() -> dict:
     default_config: dict = {"click_interval": 0.05, "toggle_hotkey": "f4"}
     try:
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-        config_path = os.path.join(script_dir, "config.toml")
+        config_path = SCRIPT_DIR / "config.toml"
 
         with open(config_path, "rb") as f:
             file_config = tomllib.load(f)
@@ -88,8 +89,7 @@ class SystemTrayApp:
         )
 
     def _create_image(self) -> Image.Image:
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-        icon_path = os.path.join(script_dir, "icon.png")
+        icon_path = SCRIPT_DIR / "icon.png"
 
         try:
             return Image.open(icon_path)
